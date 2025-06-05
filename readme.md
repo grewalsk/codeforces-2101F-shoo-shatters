@@ -68,31 +68,37 @@ The final answer is $\left( (N-1) \cdot 3^N - \sum_{D=0}^{N-2} f(D) \right) \pmo
 
 ```mermaid
 graph TD
-    subgraph "Node u (Accumulated)"
-        dp_u_acc["dp_u_acc[(a1, b1)] --> M1 (mask)"]
+    subgraph "Node u (Accumulated Part)"
+        state_u_acc["(a1, b1) with M1_mask"]
     end
 
-    subgraph "Child v"
-        dp_v["dp_v[(a2c, b2c)] --> M2 (mask)"]
+    subgraph "Child v Subtree"
+        state_v_child["(a2_child, b2_child) with M2_mask"]
     end
 
-    dp_u_acc -- combine with --> dp_v
+    state_u_acc -- Merge With --> state_v_child
 
-    subgraph "Merge Logic"
-        A[Calculate a', b']
-        B[Calculate k_cross (u-v paths)]
-        C[Unite M1, M2, k_cross to get M' (new mask)]
-        C_detail["M' = { max(m, k_cross) | m in {max(m1,m2)} }"]
+    subgraph "Merge Step Logic"
+        calc_adj_dist["1. Adjust child dists: a2=a2c+1, b2=b2c+1"]
+        calc_new_ab["2. New min dists: a'=min(a1,a2), b'=min(b1,b2)"]
+        calc_k_cross["3. Cross Path Max Dist: k_cross = max(a1+b2c+1, b1+a2c+1)"]
+        calc_unite["4. Unite Masks: M' = unite(M1, M2, k_cross)"]
+        note_unite["(unite combines internal max dists from M1,M2 then incorporates k_cross)"]
     end
+    
+    state_v_child --> calc_adj_dist
+    calc_adj_dist --> calc_new_ab
+    state_u_acc --> calc_new_ab
+    calc_new_ab --> calc_k_cross
+    calc_k_cross --> calc_unite
+    state_u_acc --> calc_unite
+    state_v_child --> calc_unite
+    calc_unite --> note_unite
 
-    dp_v -- "a2=a2c+1, b2=b2c+1" --> A
-    dp_u_acc --> A
-    A --> B
-    B --> C
-    M1 --> C
-    M2 --> C
 
-    subgraph "New DP State for u"
-        dp_u_new["dp_u_new[(a', b')] |= M'"]
+    subgraph "Result for u (after this child)"
+        state_u_new["(a', b') gets M' (OR-ed with existing)"]
     end
-    C --> dp_u_new
+    
+    calc_unite --> state_u_new
+```
